@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-door-open"></i> Chambres</h4>
+  <a href="{{ url_for('rooms.new') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle"></i> Nouvelle chambre
+  </a>
+</div>
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <table class="table table-hover table-bordered mb-0">
+      <thead style="background:#1F4E79; color:#fff;">
+        <tr>
+          <th>#</th><th>Nom</th><th>Loyer mensuel</th><th>Description</th><th>Statut</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for room in rooms %}
+        <tr>
+          <td>{{ room.id }}</td>
+          <td class="fw-semibold">{{ room.name }}</td>
+          <td>{{ "{:,.0f}".format(room.monthly_rent) }}</td>
+          <td>{{ room.description or "—" }}</td>
+          <td>
+            {% if room.is_active %}<span class="badge bg-success">Active</span>
+            {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('rooms.edit', room_id=room.id) }}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="post" action="{{ url_for('rooms.delete', room_id=room.id) }}" class="d-inline"
+                  onsubmit="return confirm('Supprimer cette chambre et tous ses paiements ?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Aucune chambre.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

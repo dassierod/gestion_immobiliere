@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-gear"></i> Paramètres</h4>
+</div>
+<div class="card shadow-sm">
+  <div class="card-body p-4">
+    <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <table class="table table-bordered">
+        <thead style="background:#1F4E79; color:#fff;">
+          <tr><th>Paramètre</th><th>Valeur</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          {% for param in params %}
+          <tr>
+            <td class="fw-semibold">{{ param.key }}</td>
+            <td>
+              <input type="text" name="param_{{ param.id }}" value="{{ param.value }}"
+                     class="form-control form-control-sm" style="max-width:200px;">
+            </td>
+            <td class="text-muted">{{ param.label or "—" }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-center text-muted py-4">Aucun paramètre.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if params %}
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-save"></i> Enregistrer les paramètres
+      </button>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}
