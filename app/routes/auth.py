@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
+from urllib.parse import urlsplit
 from ..models import User
 from ..forms import SignUpForm, LoginForm
 from .. import db
@@ -32,6 +33,9 @@ def login():
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember.data)
             next_page = request.args.get("next")
+            # Guard against open redirect: only allow relative paths on the same host
+            if next_page and urlsplit(next_page).netloc:
+                next_page = None
             flash(f"Bienvenue, {user.username} !", "success")
             return redirect(next_page or url_for("dashboard.index"))
         flash("E-mail ou mot de passe incorrect.", "danger")

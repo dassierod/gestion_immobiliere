@@ -28,7 +28,7 @@ class SignUpForm(FlaskForm):
             raise ValidationError("Ce nom d'utilisateur est déjà utilisé.")
 
     def validate_email(self, field):
-        if User.query.filter_by(email=field.data).first():
+        if User.query.filter_by(email=field.data.lower()).first():
             raise ValidationError("Cette adresse e-mail est déjà utilisée.")
 
 
