@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-receipt"></i> Dépenses {{ year }}</h4>
+  <div class="d-flex gap-2 align-items-center">
+    <form class="d-flex gap-2" method="get">
+      <input type="number" name="year" value="{{ year }}" class="form-control form-control-sm" style="width:90px;">
+      <button class="btn btn-outline-secondary btn-sm" type="submit"><i class="bi bi-search"></i></button>
+    </form>
+    <a href="{{ url_for('expenses.new') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-circle"></i> Nouvelle dépense
+    </a>
+  </div>
+</div>
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <table class="table table-hover table-bordered mb-0">
+      <thead style="background:#1F4E79; color:#fff;">
+        <tr>
+          <th>Mois</th><th>Hygiène</th><th>Caissier</th><th>Total Dépenses</th><th>Dépôt réel</th><th>Note</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in expenses %}
+        <tr>
+          <td>{{ e.month_name }}</td>
+          <td>{{ "{:,.0f}".format(e.hygiene) }}</td>
+          <td>{{ "{:,.0f}".format(e.caissier) }}</td>
+          <td>{{ "{:,.0f}".format(e.total_depenses) }}</td>
+          <td>{{ "{:,.0f}".format(e.depot_reel) }}</td>
+          <td>{{ e.note or "—" }}</td>
+          <td>
+            <a href="{{ url_for('expenses.edit', expense_id=e.id) }}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="post" action="{{ url_for('expenses.delete', expense_id=e.id) }}" class="d-inline"
+                  onsubmit="return confirm('Supprimer ces dépenses ?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Aucune dépense pour {{ year }}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

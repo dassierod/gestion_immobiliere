@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-header text-center py-3" style="background:#1F4E79; color:#fff;">
+        <h4 class="mb-0"><i class="bi bi-person-plus"></i> Créer un compte</h4>
+      </div>
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ form.username.label(class="form-label fw-semibold") }}
+            {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), placeholder="Ex : jean.dupont") }}
+            {% for error in form.username.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ form.email.label(class="form-label fw-semibold") }}
+            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="votre@email.com") }}
+            {% for error in form.email.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ form.password.label(class="form-label fw-semibold") }}
+            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="Au moins 8 caractères") }}
+            {% for error in form.password.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-4">
+            {{ form.confirm_password.label(class="form-label fw-semibold") }}
+            {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""), placeholder="Répétez le mot de passe") }}
+            {% for error in form.confirm_password.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="d-grid">
+            {{ form.submit(class="btn btn-primary btn-lg") }}
+          </div>
+        </form>
+      </div>
+      <div class="card-footer text-center text-muted py-3">
+        Déjà un compte ? <a href="{{ url_for('auth.login') }}">Se connecter</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
