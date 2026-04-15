@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}{{ locataire.prenom }} {{ locataire.nom }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('locataires_list') }}">Locataires</a></li>
+<li class="breadcrumb-item active">{{ locataire.prenom }} {{ locataire.nom }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start">
+    <div>
+        <h1><i class="bi bi-person-circle me-2 text-primary"></i>{{ locataire.prenom }} {{ locataire.nom }}</h1>
+        <p class="text-muted">{{ locataire.profession or '' }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('locataire_edit', loc_id=locataire.id) }}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil me-2"></i>Modifier
+        </a>
+        <form method="post" action="{{ url_for('locataire_delete', loc_id=locataire.id) }}" onsubmit="return confirm('Supprimer ce locataire ?')">
+            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash me-2"></i>Supprimer</button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header py-3"><i class="bi bi-person me-2"></i>Informations</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted">Email</dt>
+                    <dd class="col-7">{{ locataire.email or '—' }}</dd>
+                    <dt class="col-5 text-muted">Téléphone</dt>
+                    <dd class="col-7">{{ locataire.telephone or '—' }}</dd>
+                    <dt class="col-5 text-muted">Adresse</dt>
+                    <dd class="col-7">{{ locataire.adresse or '—' }}</dd>
+                    <dt class="col-5 text-muted">Naissance</dt>
+                    <dd class="col-7">{{ locataire.date_naissance.strftime('%d/%m/%Y') if locataire.date_naissance else '—' }}</dd>
+                    <dt class="col-5 text-muted">Profession</dt>
+                    <dd class="col-7">{{ locataire.profession or '—' }}</dd>
+                    <dt class="col-5 text-muted">Revenu/mois</dt>
+                    <dd class="col-7 fw-bold">{% if locataire.revenu_mensuel %}{{ "%.0f"|format(locataire.revenu_mensuel) }} €{% else %}—{% endif %}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center py-3">
+                <span><i class="bi bi-file-text me-2"></i>Contrats de location</span>
+            </div>
+            <div class="card-body p-0">
+                {% if contrats %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Numéro</th>
+                                <th>Bien</th>
+                                <th>Début</th>
+                                <th>Fin</th>
+                                <th>Loyer TC</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in contrats %}
+                            <tr>
+                                <td class="ps-3"><a href="{{ url_for('contrat_detail', contrat_id=c.id) }}" class="text-decoration-none fw-medium">{{ c.numero }}</a></td>
+                                <td>{{ c.bien.reference if c.bien else '—' }}</td>
+                                <td>{{ c.date_debut.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ c.date_fin.strftime('%d/%m/%Y') if c.date_fin else '—' }}</td>
+                                <td>{{ "%.0f"|format(c.loyer_total()) }} €</td>
+                                <td><span class="badge badge-{{ 'actif' if c.statut == 'Actif' else 'termine' }}">{{ c.statut }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted small">Aucun contrat pour ce locataire.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

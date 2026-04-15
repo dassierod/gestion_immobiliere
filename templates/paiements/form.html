@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Modifier' if paiement else 'Nouveau' }} paiement{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('paiements_list') }}">Paiements</a></li>
+<li class="breadcrumb-item active">{{ 'Modifier' if paiement else 'Nouveau paiement' }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-cash-coin me-2 text-primary"></i>{{ 'Modifier le paiement' if paiement else 'Enregistrer un paiement' }}</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Contrat <span class="text-danger">*</span></label>
+                            <select class="form-select" name="contrat_id" required>
+                                <option value="">-- Sélectionner un contrat --</option>
+                                {% for c in contrats %}
+                                <option value="{{ c.id }}" {% if paiement and paiement.contrat_id == c.id %}selected{% endif %}>
+                                    {{ c.numero }} – {{ c.locataire }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Date de paiement <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="date_paiement" required
+                                value="{{ paiement.date_paiement.strftime('%Y-%m-%d') if paiement else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Montant (€) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" name="montant" required
+                                value="{{ paiement.montant if paiement else '' }}" placeholder="1200.00">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Type de paiement</label>
+                            <select class="form-select" name="type_paiement">
+                                {% for t in ['Loyer', 'Charges', 'Caution', 'Réparation', 'Autre'] %}
+                                <option value="{{ t }}" {% if paiement and paiement.type_paiement == t %}selected{% elif not paiement and t == 'Loyer' %}selected{% endif %}>{{ t }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Mode de paiement</label>
+                            <select class="form-select" name="mode_paiement">
+                                {% for m in ['Virement', 'Prélèvement', 'Chèque', 'Espèces', 'Autre'] %}
+                                <option value="{{ m }}" {% if paiement and paiement.mode_paiement == m %}selected{% elif not paiement and m == 'Virement' %}selected{% endif %}>{{ m }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Statut</label>
+                            <select class="form-select" name="statut">
+                                {% for s in ['Payé', 'En attente', 'Retard'] %}
+                                <option value="{{ s }}" {% if paiement and paiement.statut == s %}selected{% elif not paiement and s == 'Payé' %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Référence</label>
+                            <input type="text" class="form-control" name="reference"
+                                value="{{ paiement.reference if paiement else '' }}" placeholder="VRT-20240105">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Note</label>
+                            <textarea class="form-control" name="note" rows="2">{{ paiement.note if paiement else '' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>{{ 'Mettre à jour' if paiement else 'Enregistrer' }}
+                        </button>
+                        <a href="{{ url_for('paiements_list') }}" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
