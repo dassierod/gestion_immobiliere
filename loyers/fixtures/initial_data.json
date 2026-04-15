@@ -1,0 +1,88 @@
+[
+  {
+    "model": "loyers.appartement",
+    "pk": 1,
+    "fields": {
+      "code": "Appartement1",
+      "appellation": "Appartement1",
+      "loyer_mensuel_attendu": "70000",
+      "devise": "FCFA",
+      "note": ""
+    }
+  },
+  {
+    "model": "loyers.appartement",
+    "pk": 2,
+    "fields": {
+      "code": "studio1",
+      "appellation": "studio1",
+      "loyer_mensuel_attendu": "35000",
+      "devise": "FCFA",
+      "note": ""
+    }
+  },
+  {
+    "model": "loyers.appartement",
+    "pk": 3,
+    "fields": {
+      "code": "studio2",
+      "appellation": "studio2",
+      "loyer_mensuel_attendu": "50000",
+      "devise": "FCFA",
+      "note": ""
+    }
+  },
+  {
+    "model": "loyers.appartement",
+    "pk": 4,
+    "fields": {
+      "code": "chambre1",
+      "appellation": "chambre1",
+      "loyer_mensuel_attendu": "25000",
+      "devise": "FCFA",
+      "note": ""
+    }
+  },
+  {
+    "model": "loyers.appartement",
+    "pk": 5,
+    "fields": {
+      "code": "chambre2",
+      "appellation": "chambre2",
+      "loyer_mensuel_attendu": "20000",
+      "devise": "FCFA",
+      "note": ""
+    }
+  },
+  {
+    "model": "loyers.appartement",
+    "pk": 6,
+    "fields": {
+      "code": "chambre3",
+      "appellation": "chambre3",
+      "loyer_mensuel_attendu": "25000",
+      "devise": "FCFA",
+      "note": ""
+    }
+  },
+  {
+    "model": "loyers.depensefixemensuelle",
+    "pk": 1,
+    "fields": {
+      "nom": "rodrigue",
+      "montant": "20000",
+      "devise": "FCFA",
+      "note": ""
+    }
+  },
+  {
+    "model": "loyers.depensefixemensuelle",
+    "pk": 2,
+    "fields": {
+      "nom": "depot direct",
+      "montant": "50000",
+      "devise": "FCFA",
+      "note": ""
+    }
+  }
+]
