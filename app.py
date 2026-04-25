@@ -1,9 +1,12 @@
 import os
 import io
+import re
 from datetime import datetime, date, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
+from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -23,11 +26,36 @@ app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'uploads')
 os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+MOIS_NOMS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+             'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+
+PHONE_WARNING_MSG = 'Format de téléphone invalide. Utilisez le format +237XXXXXXXXX.'
+
 db = SQLAlchemy(app)
 
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(30), default='lecteur')  # gestionnaire | lecteur
+    nom = db.Column(db.String(100))
+    prenom = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return f'{self.username} ({self.role})'
+
 
 class Proprietaire(db.Model):
     __tablename__ = 'proprietaires'
@@ -126,7 +154,72 @@ class Paiement(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
-        return f'Paiement {self.id} - {self.montant}€'
+        return f'Paiement {self.id} - {self.montant} FCFA'
+
+
+class Virement(db.Model):
+    __tablename__ = 'virements'
+    id = db.Column(db.Integer, primary_key=True)
+    proprietaire_id = db.Column(db.Integer, db.ForeignKey('proprietaires.id'), nullable=False)
+    montant = db.Column(db.Float, nullable=False)
+    date_virement = db.Column(db.Date, nullable=False)
+    mode_virement = db.Column(db.String(50), default='Mobile Money')
+    reference = db.Column(db.String(100))
+    note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    proprietaire = db.relationship('Proprietaire', backref='virements')
+
+    def __repr__(self):
+        return f'Virement {self.id} - {self.montant} FCFA'
+
+
+# ---------------------------------------------------------------------------
+# Jinja2 filters
+# ---------------------------------------------------------------------------
+
+@app.template_filter('fcfa')
+def format_fcfa(value):
+    try:
+        value = int(round(float(value)))
+        formatted = f'{value:,}'.replace(',', '\u00a0')  # non-breaking space
+        return f'{formatted} FCFA'
+    except (ValueError, TypeError):
+        return '0 FCFA'
+
+
+# ---------------------------------------------------------------------------
+# Auth helpers
+# ---------------------------------------------------------------------------
+
+def validate_phone(phone):
+    """Returns True if phone is empty or matches Cameroonian format."""
+    if not phone:
+        return True
+    return bool(re.match(r'^\+237[0-9]{8,9}$', phone.replace(' ', '')))
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Veuillez vous connecter pour accéder à cette page.', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def gestionnaire_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Veuillez vous connecter pour accéder à cette page.', 'warning')
+            return redirect(url_for('login'))
+        user = User.query.get(session['user_id'])
+        if not user or user.role != 'gestionnaire':
+            flash('Accès réservé aux gestionnaires.', 'danger')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated
 
 
 # ---------------------------------------------------------------------------
@@ -138,11 +231,47 @@ def inject_now():
     return {'now': datetime.utcnow()}
 
 
+@app.context_processor
+def inject_current_user():
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        return {'current_user': user}
+    return {'current_user': None}
+
+
+# ---------------------------------------------------------------------------
+# Auth routes
+# ---------------------------------------------------------------------------
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            session['user_id'] = user.id
+            flash(f'Bienvenue, {user.prenom or user.username} !', 'success')
+            return redirect(url_for('dashboard'))
+        flash('Identifiant ou mot de passe incorrect.', 'danger')
+    return render_template('auth/login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    flash('Vous avez été déconnecté.', 'info')
+    return redirect(url_for('login'))
+
+
 # ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
 
 @app.route('/')
+@login_required
 def dashboard():
     nb_biens = Bien.query.count()
     nb_biens_loues = Bien.query.filter_by(statut='Loué').count()
@@ -150,18 +279,39 @@ def dashboard():
     nb_locataires = Locataire.query.count()
     nb_contrats_actifs = Contrat.query.filter_by(statut='Actif').count()
 
-    # Revenue this month
     today = date.today()
     debut_mois = today.replace(day=1)
+    debut_annee = today.replace(month=1, day=1)
+
     revenus_mois = db.session.query(func.sum(Paiement.montant)).filter(
         Paiement.date_paiement >= debut_mois,
         Paiement.statut == 'Payé'
     ).scalar() or 0
 
-    # Recent payments
+    revenus_total = db.session.query(func.sum(Paiement.montant)).filter(
+        Paiement.statut == 'Payé'
+    ).scalar() or 0
+
+    revenus_annee = db.session.query(func.sum(Paiement.montant)).filter(
+        Paiement.date_paiement >= debut_annee,
+        Paiement.statut == 'Payé'
+    ).scalar() or 0
+
+    montant_transfere_total = db.session.query(func.sum(Virement.montant)).scalar() or 0
+    montant_transfere_annee = db.session.query(func.sum(Virement.montant)).filter(
+        Virement.date_virement >= debut_annee
+    ).scalar() or 0
+
+    solde_a_transferer = revenus_total - montant_transfere_total
+
+    paiements_retard = Paiement.query.filter_by(statut='Retard').all()
+    paiements_retard_count = len(paiements_retard)
+    paiements_retard_montant = sum(p.montant for p in paiements_retard)
+
+    paiements_avance_count = Paiement.query.filter_by(statut='Avance').count()
+
     paiements_recents = Paiement.query.order_by(Paiement.created_at.desc()).limit(10).all()
 
-    # Contracts expiring soon (next 60 days)
     in_60_days = today + timedelta(days=60)
     contrats_expirant = Contrat.query.filter(
         Contrat.statut == 'Actif',
@@ -170,7 +320,6 @@ def dashboard():
         Contrat.date_fin >= today
     ).all()
 
-    # Loyers en attente
     loyers_en_attente = Paiement.query.filter_by(statut='En attente').count()
 
     stats = {
@@ -180,6 +329,14 @@ def dashboard():
         'nb_locataires': nb_locataires,
         'nb_contrats_actifs': nb_contrats_actifs,
         'revenus_mois': revenus_mois,
+        'revenus_total': revenus_total,
+        'revenus_annee': revenus_annee,
+        'montant_transfere_total': montant_transfere_total,
+        'montant_transfere_annee': montant_transfere_annee,
+        'solde_a_transferer': solde_a_transferer,
+        'paiements_retard_count': paiements_retard_count,
+        'paiements_retard_montant': paiements_retard_montant,
+        'paiements_avance_count': paiements_avance_count,
         'loyers_en_attente': loyers_en_attente,
         'nb_contrats_expirant': len(contrats_expirant),
     }
@@ -193,6 +350,7 @@ def dashboard():
 # ---------------------------------------------------------------------------
 
 @app.route('/biens')
+@login_required
 def biens_list():
     statut = request.args.get('statut', '')
     search = request.args.get('q', '')
@@ -210,6 +368,7 @@ def biens_list():
 
 
 @app.route('/biens/nouveau', methods=['GET', 'POST'])
+@gestionnaire_required
 def bien_create():
     proprietaires = Proprietaire.query.order_by(Proprietaire.nom).all()
     if request.method == 'POST':
@@ -235,6 +394,7 @@ def bien_create():
 
 
 @app.route('/biens/<int:bien_id>')
+@login_required
 def bien_detail(bien_id):
     bien = Bien.query.get_or_404(bien_id)
     contrats = Contrat.query.filter_by(bien_id=bien_id).order_by(Contrat.date_debut.desc()).all()
@@ -242,6 +402,7 @@ def bien_detail(bien_id):
 
 
 @app.route('/biens/<int:bien_id>/modifier', methods=['GET', 'POST'])
+@gestionnaire_required
 def bien_edit(bien_id):
     bien = Bien.query.get_or_404(bien_id)
     proprietaires = Proprietaire.query.order_by(Proprietaire.nom).all()
@@ -265,6 +426,7 @@ def bien_edit(bien_id):
 
 
 @app.route('/biens/<int:bien_id>/supprimer', methods=['POST'])
+@gestionnaire_required
 def bien_delete(bien_id):
     bien = Bien.query.get_or_404(bien_id)
     db.session.delete(bien)
@@ -278,6 +440,7 @@ def bien_delete(bien_id):
 # ---------------------------------------------------------------------------
 
 @app.route('/locataires')
+@login_required
 def locataires_list():
     search = request.args.get('q', '')
     query = Locataire.query
@@ -292,11 +455,15 @@ def locataires_list():
 
 
 @app.route('/locataires/nouveau', methods=['GET', 'POST'])
+@gestionnaire_required
 def locataire_create():
     if request.method == 'POST':
         dob = None
         if request.form.get('date_naissance'):
             dob = datetime.strptime(request.form['date_naissance'], '%Y-%m-%d').date()
+        phone = request.form.get('telephone', '')
+        if not validate_phone(phone):
+            flash(PHONE_WARNING_MSG, 'warning')
         locataire = Locataire(
             nom=request.form['nom'],
             prenom=request.form['prenom'],
@@ -315,6 +482,7 @@ def locataire_create():
 
 
 @app.route('/locataires/<int:loc_id>')
+@login_required
 def locataire_detail(loc_id):
     locataire = Locataire.query.get_or_404(loc_id)
     contrats = Contrat.query.filter_by(locataire_id=loc_id).order_by(Contrat.date_debut.desc()).all()
@@ -322,12 +490,16 @@ def locataire_detail(loc_id):
 
 
 @app.route('/locataires/<int:loc_id>/modifier', methods=['GET', 'POST'])
+@gestionnaire_required
 def locataire_edit(loc_id):
     locataire = Locataire.query.get_or_404(loc_id)
     if request.method == 'POST':
         dob = None
         if request.form.get('date_naissance'):
             dob = datetime.strptime(request.form['date_naissance'], '%Y-%m-%d').date()
+        phone = request.form.get('telephone', '')
+        if not validate_phone(phone):
+            flash(PHONE_WARNING_MSG, 'warning')
         locataire.nom = request.form['nom']
         locataire.prenom = request.form['prenom']
         locataire.email = request.form.get('email', '')
@@ -343,6 +515,7 @@ def locataire_edit(loc_id):
 
 
 @app.route('/locataires/<int:loc_id>/supprimer', methods=['POST'])
+@gestionnaire_required
 def locataire_delete(loc_id):
     locataire = Locataire.query.get_or_404(loc_id)
     db.session.delete(locataire)
@@ -356,6 +529,7 @@ def locataire_delete(loc_id):
 # ---------------------------------------------------------------------------
 
 @app.route('/contrats')
+@login_required
 def contrats_list():
     statut = request.args.get('statut', '')
     query = Contrat.query
@@ -366,6 +540,7 @@ def contrats_list():
 
 
 @app.route('/contrats/nouveau', methods=['GET', 'POST'])
+@gestionnaire_required
 def contrat_create():
     biens = Bien.query.filter(Bien.statut.in_(['Disponible', 'Loué'])).order_by(Bien.reference).all()
     locataires = Locataire.query.order_by(Locataire.nom).all()
@@ -396,6 +571,7 @@ def contrat_create():
 
 
 @app.route('/contrats/<int:contrat_id>')
+@login_required
 def contrat_detail(contrat_id):
     contrat = Contrat.query.get_or_404(contrat_id)
     paiements = Paiement.query.filter_by(contrat_id=contrat_id).order_by(Paiement.date_paiement.desc()).all()
@@ -403,6 +579,7 @@ def contrat_detail(contrat_id):
 
 
 @app.route('/contrats/<int:contrat_id>/modifier', methods=['GET', 'POST'])
+@gestionnaire_required
 def contrat_edit(contrat_id):
     contrat = Contrat.query.get_or_404(contrat_id)
     biens = Bien.query.order_by(Bien.reference).all()
@@ -435,6 +612,7 @@ def contrat_edit(contrat_id):
 
 
 @app.route('/contrats/<int:contrat_id>/supprimer', methods=['POST'])
+@gestionnaire_required
 def contrat_delete(contrat_id):
     contrat = Contrat.query.get_or_404(contrat_id)
     db.session.delete(contrat)
@@ -448,16 +626,37 @@ def contrat_delete(contrat_id):
 # ---------------------------------------------------------------------------
 
 @app.route('/paiements')
+@login_required
 def paiements_list():
     statut = request.args.get('statut', '')
-    query = Paiement.query
+    date_debut = request.args.get('date_debut', '')
+    date_fin = request.args.get('date_fin', '')
+    locataire_id = request.args.get('locataire_id', '')
+    bien_id = request.args.get('bien_id', '')
+
+    query = Paiement.query.join(Contrat)
     if statut:
-        query = query.filter_by(statut=statut)
+        query = query.filter(Paiement.statut == statut)
+    if date_debut:
+        query = query.filter(Paiement.date_paiement >= datetime.strptime(date_debut, '%Y-%m-%d').date())
+    if date_fin:
+        query = query.filter(Paiement.date_paiement <= datetime.strptime(date_fin, '%Y-%m-%d').date())
+    if locataire_id:
+        query = query.filter(Contrat.locataire_id == int(locataire_id))
+    if bien_id:
+        query = query.filter(Contrat.bien_id == int(bien_id))
+
     paiements = query.order_by(Paiement.date_paiement.desc()).all()
-    return render_template('paiements/list.html', paiements=paiements, statut=statut)
+    locataires = Locataire.query.order_by(Locataire.nom).all()
+    biens = Bien.query.order_by(Bien.reference).all()
+    return render_template('paiements/list.html', paiements=paiements, statut=statut,
+                           date_debut=date_debut, date_fin=date_fin,
+                           locataire_id=locataire_id, bien_id=bien_id,
+                           locataires=locataires, biens=biens)
 
 
 @app.route('/paiements/nouveau', methods=['GET', 'POST'])
+@gestionnaire_required
 def paiement_create():
     contrats = Contrat.query.filter_by(statut='Actif').order_by(Contrat.numero).all()
     if request.method == 'POST':
@@ -466,7 +665,7 @@ def paiement_create():
             date_paiement=datetime.strptime(request.form['date_paiement'], '%Y-%m-%d').date(),
             montant=float(request.form['montant']),
             type_paiement=request.form.get('type_paiement', 'Loyer'),
-            mode_paiement=request.form.get('mode_paiement', 'Virement'),
+            mode_paiement=request.form.get('mode_paiement', 'Mobile Money'),
             statut=request.form.get('statut', 'Payé'),
             reference=request.form.get('reference', ''),
             note=request.form.get('note', ''),
@@ -479,6 +678,7 @@ def paiement_create():
 
 
 @app.route('/paiements/<int:paiement_id>/modifier', methods=['GET', 'POST'])
+@gestionnaire_required
 def paiement_edit(paiement_id):
     paiement = Paiement.query.get_or_404(paiement_id)
     contrats = Contrat.query.order_by(Contrat.numero).all()
@@ -487,7 +687,7 @@ def paiement_edit(paiement_id):
         paiement.date_paiement = datetime.strptime(request.form['date_paiement'], '%Y-%m-%d').date()
         paiement.montant = float(request.form['montant'])
         paiement.type_paiement = request.form.get('type_paiement', 'Loyer')
-        paiement.mode_paiement = request.form.get('mode_paiement', 'Virement')
+        paiement.mode_paiement = request.form.get('mode_paiement', 'Mobile Money')
         paiement.statut = request.form.get('statut', 'Payé')
         paiement.reference = request.form.get('reference', '')
         paiement.note = request.form.get('note', '')
@@ -498,6 +698,7 @@ def paiement_edit(paiement_id):
 
 
 @app.route('/paiements/<int:paiement_id>/supprimer', methods=['POST'])
+@gestionnaire_required
 def paiement_delete(paiement_id):
     paiement = Paiement.query.get_or_404(paiement_id)
     db.session.delete(paiement)
@@ -511,14 +712,19 @@ def paiement_delete(paiement_id):
 # ---------------------------------------------------------------------------
 
 @app.route('/proprietaires')
+@login_required
 def proprietaires_list():
     proprietaires = Proprietaire.query.order_by(Proprietaire.nom).all()
     return render_template('proprietaires/list.html', proprietaires=proprietaires)
 
 
 @app.route('/proprietaires/nouveau', methods=['GET', 'POST'])
+@gestionnaire_required
 def proprietaire_create():
     if request.method == 'POST':
+        phone = request.form.get('telephone', '')
+        if not validate_phone(phone):
+            flash(PHONE_WARNING_MSG, 'warning')
         proprietaire = Proprietaire(
             nom=request.form['nom'],
             prenom=request.form['prenom'],
@@ -534,9 +740,13 @@ def proprietaire_create():
 
 
 @app.route('/proprietaires/<int:prop_id>/modifier', methods=['GET', 'POST'])
+@gestionnaire_required
 def proprietaire_edit(prop_id):
     proprietaire = Proprietaire.query.get_or_404(prop_id)
     if request.method == 'POST':
+        phone = request.form.get('telephone', '')
+        if not validate_phone(phone):
+            flash(PHONE_WARNING_MSG, 'warning')
         proprietaire.nom = request.form['nom']
         proprietaire.prenom = request.form['prenom']
         proprietaire.email = request.form.get('email', '')
@@ -549,6 +759,7 @@ def proprietaire_edit(prop_id):
 
 
 @app.route('/proprietaires/<int:prop_id>/supprimer', methods=['POST'])
+@gestionnaire_required
 def proprietaire_delete(prop_id):
     proprietaire = Proprietaire.query.get_or_404(prop_id)
     db.session.delete(proprietaire)
@@ -580,6 +791,7 @@ def _add_borders(ws, min_row, max_row, max_col):
 
 
 @app.route('/export/excel')
+@login_required
 def export_excel():
     wb = openpyxl.Workbook()
 
@@ -587,7 +799,7 @@ def export_excel():
     ws_biens = wb.active
     ws_biens.title = 'Biens'
     headers_biens = ['Référence', 'Type', 'Adresse', 'Ville', 'Code Postal',
-                     'Surface (m²)', 'Nb Pièces', 'Loyer (€)', 'Charges (€)', 'Statut', 'Description']
+                     'Surface (m²)', 'Nb Pièces', 'Loyer (FCFA)', 'Charges (FCFA)', 'Statut', 'Description']
     ws_biens.append(headers_biens)
     _style_header_row(ws_biens, 1, len(headers_biens))
     for bien in Bien.query.order_by(Bien.reference).all():
@@ -601,7 +813,7 @@ def export_excel():
     # --- Locataires ---
     ws_loc = wb.create_sheet('Locataires')
     headers_loc = ['Nom', 'Prénom', 'Email', 'Téléphone', 'Adresse',
-                   'Date de naissance', 'Profession', 'Revenu mensuel (€)']
+                   'Date de naissance', 'Profession', 'Revenu mensuel (FCFA)']
     ws_loc.append(headers_loc)
     _style_header_row(ws_loc, 1, len(headers_loc))
     for loc in Locataire.query.order_by(Locataire.nom).all():
@@ -615,7 +827,7 @@ def export_excel():
     # --- Contrats ---
     ws_cont = wb.create_sheet('Contrats')
     headers_cont = ['Numéro', 'Bien (Réf)', 'Locataire', 'Date début', 'Date fin',
-                    'Loyer (€)', 'Charges (€)', 'Caution (€)', 'Statut']
+                    'Loyer (FCFA)', 'Charges (FCFA)', 'Caution (FCFA)', 'Statut']
     ws_cont.append(headers_cont)
     _style_header_row(ws_cont, 1, len(headers_cont))
     for c in Contrat.query.order_by(Contrat.date_debut.desc()).all():
@@ -632,7 +844,7 @@ def export_excel():
 
     # --- Paiements ---
     ws_pay = wb.create_sheet('Paiements')
-    headers_pay = ['Contrat', 'Date', 'Montant (€)', 'Type', 'Mode', 'Statut', 'Référence', 'Note']
+    headers_pay = ['Contrat', 'Date', 'Montant (FCFA)', 'Type', 'Mode', 'Statut', 'Référence', 'Note']
     ws_pay.append(headers_pay)
     _style_header_row(ws_pay, 1, len(headers_pay))
     for p in Paiement.query.order_by(Paiement.date_paiement.desc()).all():
@@ -654,6 +866,7 @@ def export_excel():
 
 
 @app.route('/import/excel', methods=['GET', 'POST'])
+@login_required
 def import_excel():
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -743,31 +956,52 @@ def seed_demo():
         flash('Des données existent déjà.', 'info')
         return redirect(url_for('dashboard'))
 
+    # Create default admin user
+    if not User.query.filter_by(username='admin').first():
+        admin = User(username='admin', role='gestionnaire', nom='Administrateur', prenom='Système')
+        admin.set_password('admin123')
+        db.session.add(admin)
+
     # Proprietaire
-    p1 = Proprietaire(nom='Dupont', prenom='Jean', email='jean.dupont@email.com', telephone='06 12 34 56 78', adresse='10 rue de Paris, 75001 Paris')
+    p1 = Proprietaire(nom='Mbarga', prenom='Jean', email='jean.mbarga@email.cm',
+                      telephone='+237677123456', adresse='Bastos, Yaoundé, Cameroun')
     db.session.add(p1)
     db.session.flush()
 
+    # Create a proprietaire user
+    if not User.query.filter_by(username='mbarga').first():
+        prop_user = User(username='mbarga', role='lecteur', nom='Mbarga', prenom='Jean')
+        prop_user.set_password('mbarga123')
+        db.session.add(prop_user)
+
     # Biens
-    b1 = Bien(reference='APP-001', type_bien='Appartement', adresse='15 avenue Victor Hugo', ville='Paris', code_postal='75016', surface=65.0, nb_pieces=3, loyer_mensuel=1200.0, charges=150.0, statut='Loué', proprietaire_id=p1.id)
-    b2 = Bien(reference='APP-002', type_bien='Appartement', adresse='8 rue du Moulin', ville='Lyon', code_postal='69003', surface=45.0, nb_pieces=2, loyer_mensuel=750.0, charges=80.0, statut='Disponible', proprietaire_id=p1.id)
-    b3 = Bien(reference='MAI-001', type_bien='Maison', adresse='25 chemin des Fleurs', ville='Bordeaux', code_postal='33000', surface=120.0, nb_pieces=5, loyer_mensuel=1500.0, charges=200.0, statut='Loué', proprietaire_id=p1.id)
+    b1 = Bien(reference='APP-001', type_bien='Appartement', adresse='Rue Nachtigal, Quartier du Lac',
+              ville='Yaoundé', code_postal='', surface=65.0, nb_pieces=3,
+              loyer_mensuel=150000.0, charges=15000.0, statut='Loué', proprietaire_id=p1.id)
+    b2 = Bien(reference='APP-002', type_bien='Appartement', adresse='Akwa, Boulevard de la Liberté',
+              ville='Douala', code_postal='', surface=45.0, nb_pieces=2,
+              loyer_mensuel=100000.0, charges=10000.0, statut='Disponible', proprietaire_id=p1.id)
+    b3 = Bien(reference='MAI-001', type_bien='Maison', adresse='Omnisports, Rue 1.234',
+              ville='Yaoundé', code_postal='', surface=120.0, nb_pieces=5,
+              loyer_mensuel=300000.0, charges=25000.0, statut='Loué', proprietaire_id=p1.id)
     db.session.add_all([b1, b2, b3])
     db.session.flush()
 
     # Locataires
-    l1 = Locataire(nom='Martin', prenom='Sophie', email='sophie.martin@email.com', telephone='06 98 76 54 32', profession='Ingénieure', revenu_mensuel=3500.0)
-    l2 = Locataire(nom='Bernard', prenom='Paul', email='paul.bernard@email.com', telephone='07 11 22 33 44', profession='Médecin', revenu_mensuel=5000.0)
+    l1 = Locataire(nom='Nkomo', prenom='Marie', email='marie.nkomo@email.cm',
+                   telephone='+237698765432', profession='Ingénieure', revenu_mensuel=450000.0)
+    l2 = Locataire(nom='Fotso', prenom='Paul', email='paul.fotso@email.cm',
+                   telephone='+237677112233', profession='Médecin', revenu_mensuel=700000.0)
     db.session.add_all([l1, l2])
     db.session.flush()
 
     # Contrats
     c1 = Contrat(numero='CTR-2024-001', bien_id=b1.id, locataire_id=l1.id,
                  date_debut=date(2024, 1, 1), date_fin=date(2026, 12, 31),
-                 loyer=1200.0, charges=150.0, caution=2400.0, statut='Actif')
+                 loyer=150000.0, charges=15000.0, caution=300000.0, statut='Actif')
     c2 = Contrat(numero='CTR-2024-002', bien_id=b3.id, locataire_id=l2.id,
                  date_debut=date(2024, 3, 1), date_fin=date(2027, 2, 28),
-                 loyer=1500.0, charges=200.0, caution=3000.0, statut='Actif')
+                 loyer=300000.0, charges=25000.0, caution=600000.0, statut='Actif')
     db.session.add_all([c1, c2])
     db.session.flush()
 
@@ -780,15 +1014,118 @@ def seed_demo():
             month += 12
             year -= 1
         db.session.add(Paiement(contrat_id=c1.id, date_paiement=date(year, month, 5),
-                                montant=1350.0, type_paiement='Loyer', mode_paiement='Virement', statut='Payé'))
+                                montant=165000.0, type_paiement='Loyer',
+                                mode_paiement='Mobile Money', statut='Payé'))
         db.session.add(Paiement(contrat_id=c2.id, date_paiement=date(year, month, 3),
-                                montant=1700.0, type_paiement='Loyer', mode_paiement='Prélèvement', statut='Payé'))
+                                montant=325000.0, type_paiement='Loyer',
+                                mode_paiement='Virement bancaire', statut='Payé'))
     db.session.add(Paiement(contrat_id=c1.id, date_paiement=date(today.year, today.month, 5),
-                            montant=1350.0, type_paiement='Loyer', mode_paiement='Virement', statut='En attente'))
+                            montant=165000.0, type_paiement='Loyer',
+                            mode_paiement='Mobile Money', statut='En attente'))
+
+    # Virement demo
+    db.session.add(Virement(proprietaire_id=p1.id, montant=980000.0,
+                            date_virement=date(today.year, today.month - 1 if today.month > 1 else 12, 15),
+                            mode_virement='Virement bancaire', reference='VIR-2024-001',
+                            note='Virement trimestriel'))
 
     db.session.commit()
     flash('Données de démonstration créées avec succès !', 'success')
     return redirect(url_for('dashboard'))
+
+
+# ---------------------------------------------------------------------------
+# Virements (Owner transfers)
+# ---------------------------------------------------------------------------
+
+@app.route('/virements')
+@login_required
+def virements_list():
+    virements = Virement.query.order_by(Virement.date_virement.desc()).all()
+    total = sum(v.montant for v in virements)
+    return render_template('virements/list.html', virements=virements, total=total)
+
+
+@app.route('/virements/nouveau', methods=['GET', 'POST'])
+@gestionnaire_required
+def virement_create():
+    proprietaires = Proprietaire.query.order_by(Proprietaire.nom).all()
+    if request.method == 'POST':
+        virement = Virement(
+            proprietaire_id=int(request.form['proprietaire_id']),
+            montant=float(request.form['montant']),
+            date_virement=datetime.strptime(request.form['date_virement'], '%Y-%m-%d').date(),
+            mode_virement=request.form.get('mode_virement', 'Mobile Money'),
+            reference=request.form.get('reference', ''),
+            note=request.form.get('note', ''),
+        )
+        db.session.add(virement)
+        db.session.commit()
+        flash('Virement enregistré avec succès.', 'success')
+        return redirect(url_for('virements_list'))
+    return render_template('virements/form.html', virement=None, proprietaires=proprietaires)
+
+
+@app.route('/virements/<int:virement_id>/supprimer', methods=['POST'])
+@gestionnaire_required
+def virement_delete(virement_id):
+    virement = Virement.query.get_or_404(virement_id)
+    db.session.delete(virement)
+    db.session.commit()
+    flash('Virement supprimé.', 'warning')
+    return redirect(url_for('virements_list'))
+
+
+# ---------------------------------------------------------------------------
+# Rapports (Reports)
+# ---------------------------------------------------------------------------
+
+
+@app.route('/rapports')
+@login_required
+def rapports():
+    annee_courante = date.today().year
+    annee = int(request.args.get('annee', annee_courante))
+    annees_disponibles = list(range(annee_courante, annee_courante - 5, -1))
+
+    rapports_data = []
+    total_revenus = 0
+    total_virements = 0
+
+    for mois in range(1, 13):
+        debut = date(annee, mois, 1)
+        if mois == 12:
+            fin = date(annee, 12, 31)
+        else:
+            fin = date(annee, mois + 1, 1) - timedelta(days=1)
+
+        revenus = db.session.query(func.sum(Paiement.montant)).filter(
+            Paiement.statut == 'Payé',
+            Paiement.date_paiement >= debut,
+            Paiement.date_paiement <= fin
+        ).scalar() or 0
+
+        virements = db.session.query(func.sum(Virement.montant)).filter(
+            Virement.date_virement >= debut,
+            Virement.date_virement <= fin
+        ).scalar() or 0
+
+        rapports_data.append({
+            'mois': MOIS_NOMS[mois - 1],
+            'revenus': revenus,
+            'virements': virements,
+            'solde': revenus - virements,
+        })
+        total_revenus += revenus
+        total_virements += virements
+
+    return render_template('rapports/index.html',
+                           rapports_data=rapports_data,
+                           annee=annee,
+                           annees_disponibles=annees_disponibles,
+                           total_revenus=total_revenus,
+                           total_virements=total_virements,
+                           total_solde=total_revenus - total_virements)
 
 
 # ---------------------------------------------------------------------------
@@ -797,6 +1134,12 @@ def seed_demo():
 
 with app.app_context():
     db.create_all()
+    # Create default admin if no users exist
+    if not User.query.first():
+        admin = User(username='admin', role='gestionnaire', nom='Administrateur', prenom='Système')
+        admin.set_password('admin123')
+        db.session.add(admin)
+        db.session.commit()
 
 if __name__ == '__main__':
     debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'

@@ -59,7 +59,7 @@
                     <i class="bi bi-cash-coin" style="color:#5b21b6"></i>
                 </div>
                 <div>
-                    <div class="fs-4 fw-bold">{{ "%.0f"|format(stats.revenus_mois) }} €</div>
+                    <div class="fs-4 fw-bold">{{ stats.revenus_mois|fcfa }}</div>
                     <div class="text-muted small">Revenus ce mois</div>
                 </div>
             </div>
@@ -71,6 +71,61 @@
         </div>
     </div>
 </div>
+
+<!-- Additional financial stats -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="icon-box" style="background:#d1fae5">
+                    <i class="bi bi-graph-up-arrow" style="color:#065f46"></i>
+                </div>
+                <div>
+                    <div class="fs-5 fw-bold">{{ stats.revenus_total|fcfa }}</div>
+                    <div class="text-muted small">Revenus totaux</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="icon-box" style="background:#dbeafe">
+                    <i class="bi bi-arrow-up-circle" style="color:#1e40af"></i>
+                </div>
+                <div>
+                    <div class="fs-5 fw-bold">{{ stats.montant_transfere_total|fcfa }}</div>
+                    <div class="text-muted small">Montant viré</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="icon-box" style="background:#fef3c7">
+                    <i class="bi bi-piggy-bank" style="color:#92400e"></i>
+                </div>
+                <div>
+                    <div class="fs-5 fw-bold">{{ stats.solde_a_transferer|fcfa }}</div>
+                    <div class="text-muted small">Solde à virer</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="icon-box" style="background:#fee2e2">
+                    <i class="bi bi-exclamation-triangle" style="color:#991b1b"></i>
+                </div>
+                <div>
+                    <div class="fs-5 fw-bold text-danger">{{ stats.paiements_retard_count }}</div>
+                    <div class="text-muted small">Paiements en retard</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 <div class="row g-4">
     <!-- Recent payments -->
@@ -102,7 +157,7 @@
                                     </a>
                                 </td>
                                 <td>{{ p.date_paiement.strftime('%d/%m/%Y') }}</td>
-                                <td class="fw-bold">{{ "%.2f"|format(p.montant) }} €</td>
+                                <td class="fw-bold">{{ p.montant|fcfa }}</td>
                                 <td><span class="text-muted small">{{ p.type_paiement }}</span></td>
                                 <td>
                                     {% if p.statut == 'Payé' %}

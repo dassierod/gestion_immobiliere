@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion – GesImmo Cameroun</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #1f4e79 0%, #102a43 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .login-card { border: none; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.25); max-width: 400px; width: 100%; }
+        .login-brand { color: #1f4e79; font-weight: 700; font-size: 1.5rem; }
+        .btn-primary { background: #1f4e79; border-color: #1f4e79; }
+        .btn-primary:hover { background: #2e75b6; border-color: #2e75b6; }
+        .form-control:focus { border-color: #1f4e79; box-shadow: 0 0 0 0.2rem rgba(31,78,121,0.15); }
+    </style>
+</head>
+<body>
+<div class="login-card card p-4 mx-3">
+    <div class="text-center mb-4">
+        <i class="bi bi-building fs-1 text-primary"></i>
+        <div class="login-brand mt-2">GesImmo Cameroun</div>
+        <div class="text-muted small">Gestion immobilière</div>
+    </div>
+
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+    <div class="alert alert-{{ 'success' if category == 'success' else ('warning' if category == 'warning' else ('info' if category == 'info' else 'danger')) }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+
+    <form method="post">
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Identifiant</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                <input type="text" class="form-control" name="username" placeholder="admin" required autofocus>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="form-label fw-semibold">Mot de passe</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input type="password" class="form-control" name="password" placeholder="••••••••" required>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
+        </button>
+    </form>
+</div>
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

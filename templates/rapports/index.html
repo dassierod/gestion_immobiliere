@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Rapports mensuels{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Rapports</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-bar-chart me-2 text-primary"></i>Rapports mensuels</h1>
+    <p class="text-muted">Synthèse des revenus et virements par mois</p>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form class="row g-2 align-items-center" method="get">
+            <div class="col-auto">
+                <label class="form-label mb-0 fw-semibold">Année :</label>
+            </div>
+            <div class="col-md-2">
+                <select name="annee" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for a in annees_disponibles %}
+                    <option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-table me-2"></i>Synthèse {{ annee }}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Mois</th>
+                        <th class="text-end">Revenus collectés</th>
+                        <th class="text-end">Virements effectués</th>
+                        <th class="text-end pe-3">Solde</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rapports_data %}
+                    <tr>
+                        <td class="ps-3 fw-medium">{{ row.mois }}</td>
+                        <td class="text-end text-success fw-semibold">{{ row.revenus|fcfa }}</td>
+                        <td class="text-end text-primary fw-semibold">{{ row.virements|fcfa }}</td>
+                        <td class="text-end pe-3 {% if row.solde >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                            {{ row.solde|fcfa }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td class="ps-3">Total {{ annee }}</td>
+                        <td class="text-end text-success">{{ total_revenus|fcfa }}</td>
+                        <td class="text-end text-primary">{{ total_virements|fcfa }}</td>
+                        <td class="text-end pe-3 {% if total_solde >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ total_solde|fcfa }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

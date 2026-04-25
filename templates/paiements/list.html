@@ -18,12 +18,35 @@
 <div class="card mb-3">
     <div class="card-body py-2">
         <form class="row g-2 align-items-center" method="get">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select name="statut" class="form-select form-select-sm">
                     <option value="">Tous les statuts</option>
                     <option value="Payé" {% if statut == 'Payé' %}selected{% endif %}>Payé</option>
                     <option value="En attente" {% if statut == 'En attente' %}selected{% endif %}>En attente</option>
                     <option value="Retard" {% if statut == 'Retard' %}selected{% endif %}>Retard</option>
+                    <option value="Avance" {% if statut == 'Avance' %}selected{% endif %}>Avance</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_debut" class="form-control form-control-sm" value="{{ date_debut }}" placeholder="Date début">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_fin" class="form-control form-control-sm" value="{{ date_fin }}" placeholder="Date fin">
+            </div>
+            <div class="col-md-2">
+                <select name="locataire_id" class="form-select form-select-sm">
+                    <option value="">Tous les locataires</option>
+                    {% for l in locataires %}
+                    <option value="{{ l.id }}" {% if locataire_id == l.id|string %}selected{% endif %}>{{ l }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="bien_id" class="form-select form-select-sm">
+                    <option value="">Tous les biens</option>
+                    {% for b in biens %}
+                    <option value="{{ b.id }}" {% if bien_id == b.id|string %}selected{% endif %}>{{ b.reference }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="col-auto">
@@ -59,7 +82,7 @@
                         </td>
                         <td>{{ p.contrat.locataire if p.contrat else '—' }}</td>
                         <td>{{ p.date_paiement.strftime('%d/%m/%Y') }}</td>
-                        <td class="fw-bold">{{ "%.2f"|format(p.montant) }} €</td>
+                        <td class="fw-bold">{{ p.montant|fcfa }}</td>
                         <td>{{ p.type_paiement }}</td>
                         <td>{{ p.mode_paiement }}</td>
                         <td>

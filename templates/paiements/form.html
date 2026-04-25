@@ -33,9 +33,9 @@
                                 value="{{ paiement.date_paiement.strftime('%Y-%m-%d') if paiement else '' }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Montant (€) <span class="text-danger">*</span></label>
-                            <input type="number" step="0.01" class="form-control" name="montant" required
-                                value="{{ paiement.montant if paiement else '' }}" placeholder="1200.00">
+                            <label class="form-label fw-semibold">Montant (FCFA) <span class="text-danger">*</span></label>
+                            <input type="number" step="1" class="form-control" name="montant" required
+                                value="{{ paiement.montant if paiement else '' }}" placeholder="150000">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Type de paiement</label>
@@ -48,15 +48,15 @@
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Mode de paiement</label>
                             <select class="form-select" name="mode_paiement">
-                                {% for m in ['Virement', 'Prélèvement', 'Chèque', 'Espèces', 'Autre'] %}
-                                <option value="{{ m }}" {% if paiement and paiement.mode_paiement == m %}selected{% elif not paiement and m == 'Virement' %}selected{% endif %}>{{ m }}</option>
+                                {% for m in ['Espèces', 'Mobile Money', 'Virement bancaire', 'Chèque'] %}
+                                <option value="{{ m }}" {% if paiement and paiement.mode_paiement == m %}selected{% elif not paiement and m == 'Mobile Money' %}selected{% endif %}>{{ m }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Statut</label>
                             <select class="form-select" name="statut">
-                                {% for s in ['Payé', 'En attente', 'Retard'] %}
+                                {% for s in ['Payé', 'En attente', 'Retard', 'Avance'] %}
                                 <option value="{{ s }}" {% if paiement and paiement.statut == s %}selected{% elif not paiement and s == 'Payé' %}selected{% endif %}>{{ s }}</option>
                                 {% endfor %}
                             </select>

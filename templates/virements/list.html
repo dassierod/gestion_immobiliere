@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Virements{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Virements</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="bi bi-arrow-up-circle me-2 text-primary"></i>Virements propriétaires</h1>
+        <p class="text-muted">Transferts de fonds vers les propriétaires</p>
+    </div>
+    {% if current_user and current_user.role == 'gestionnaire' %}
+    <a href="{{ url_for('virement_create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-2"></i>Nouveau virement
+    </a>
+    {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="icon-box" style="background:#dbeafe">
+                    <i class="bi bi-arrow-up-circle" style="color:#1e40af"></i>
+                </div>
+                <div>
+                    <div class="fs-5 fw-bold">{{ total|fcfa }}</div>
+                    <div class="text-muted small">Total transféré</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if virements %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Date</th>
+                        <th>Propriétaire</th>
+                        <th>Montant</th>
+                        <th>Mode</th>
+                        <th>Référence</th>
+                        <th>Note</th>
+                        {% if current_user and current_user.role == 'gestionnaire' %}
+                        <th class="text-end pe-3">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in virements %}
+                    <tr>
+                        <td class="ps-3">{{ v.date_virement.strftime('%d/%m/%Y') }}</td>
+                        <td class="fw-medium">{{ v.proprietaire }}</td>
+                        <td class="fw-bold text-primary">{{ v.montant|fcfa }}</td>
+                        <td><span class="badge bg-secondary">{{ v.mode_virement }}</span></td>
+                        <td>{{ v.reference or '—' }}</td>
+                        <td class="text-muted small">{{ v.note or '—' }}</td>
+                        {% if current_user and current_user.role == 'gestionnaire' %}
+                        <td class="text-end pe-3">
+                            <form method="post" action="{{ url_for('virement_delete', virement_id=v.id) }}" class="d-inline" onsubmit="return confirm('Supprimer ce virement ?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-arrow-up-circle fs-1 d-block mb-3"></i>
+            <h5>Aucun virement enregistré</h5>
+            {% if current_user and current_user.role == 'gestionnaire' %}
+            <a href="{{ url_for('virement_create') }}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-lg me-2"></i>Enregistrer un virement
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
