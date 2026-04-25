@@ -42,7 +42,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(30), default='lecteur')  # gestionnaire | lecteur
+    role = db.Column(db.String(30), default='proprietaire')  # gestionnaire | proprietaire
     nom = db.Column(db.String(100))
     prenom = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -195,7 +195,7 @@ def validate_phone(phone):
     """Returns True if phone is empty or matches Cameroonian format."""
     if not phone:
         return True
-    return bool(re.match(r'^\+237[0-9]{8,9}$', phone.replace(' ', '')))
+    return bool(re.match(r'^\+237[0-9]{9}$', phone.replace(' ', '')))
 
 
 def login_required(f):
@@ -970,7 +970,7 @@ def seed_demo():
 
     # Create a proprietaire user
     if not User.query.filter_by(username='mbarga').first():
-        prop_user = User(username='mbarga', role='lecteur', nom='Mbarga', prenom='Jean')
+        prop_user = User(username='mbarga', role='proprietaire', nom='Mbarga', prenom='Jean')
         prop_user.set_password('mbarga123')
         db.session.add(prop_user)
 
@@ -1025,7 +1025,8 @@ def seed_demo():
 
     # Virement demo
     db.session.add(Virement(proprietaire_id=p1.id, montant=980000.0,
-                            date_virement=date(today.year, today.month - 1 if today.month > 1 else 12, 15),
+                            date_virement=date(today.year - 1 if today.month == 1 else today.year,
+                                              today.month - 1 if today.month > 1 else 12, 15),
                             mode_virement='Virement bancaire', reference='VIR-2024-001',
                             note='Virement trimestriel'))
 

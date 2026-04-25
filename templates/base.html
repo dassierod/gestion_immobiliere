@@ -177,7 +177,7 @@
         <div class="d-flex align-items-center gap-3">
             <span class="text-muted small"><i class="bi bi-calendar3 me-1"></i>{{ now.strftime('%d/%m/%Y') }}</span>
             {% if current_user %}
-            <span class="text-muted small"><i class="bi bi-person-circle me-1"></i>{{ current_user.nom if current_user.nom else current_user.username }} ({{ current_user.role|title }})</span>
+            <span class="text-muted small"><i class="bi bi-person-circle me-1"></i>{{ current_user.nom if current_user.nom else current_user.username }} ({{ 'Gestionnaire' if current_user.role == 'gestionnaire' else 'Propriétaire' }})</span>
             <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger" title="Se déconnecter">
                 <i class="bi bi-box-arrow-right me-1"></i>Déconnexion
             </a>
