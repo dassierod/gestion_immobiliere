@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Propriétaires{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Propriétaires</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="bi bi-person-badge me-2 text-primary"></i>Propriétaires</h1>
+        <p class="text-muted">Gestion des propriétaires de biens</p>
+    </div>
+    <a href="{{ url_for('proprietaire_create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-2"></i>Nouveau propriétaire
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if proprietaires %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Nom / Prénom</th>
+                        <th>Email</th>
+                        <th>Téléphone</th>
+                        <th>Adresse</th>
+                        <th>Biens</th>
+                        <th class="text-end pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in proprietaires %}
+                    <tr>
+                        <td class="ps-3 fw-semibold">{{ p.nom }} {{ p.prenom }}</td>
+                        <td>{{ p.email or '—' }}</td>
+                        <td>{{ p.telephone or '—' }}</td>
+                        <td>{{ p.adresse or '—' }}</td>
+                        <td><span class="badge bg-secondary">{{ p.biens|length }}</span></td>
+                        <td class="text-end pe-3">
+                            <a href="{{ url_for('proprietaire_edit', prop_id=p.id) }}" class="btn btn-sm btn-outline-secondary" title="Modifier"><i class="bi bi-pencil"></i></a>
+                            <form method="post" action="{{ url_for('proprietaire_delete', prop_id=p.id) }}" class="d-inline" onsubmit="return confirm('Supprimer ce propriétaire ?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-person-x fs-1 d-block mb-3"></i>
+            <h5>Aucun propriétaire enregistré</h5>
+            <a href="{{ url_for('proprietaire_create') }}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-lg me-2"></i>Ajouter un propriétaire
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

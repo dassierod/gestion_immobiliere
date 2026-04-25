@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Modifier' if locataire else 'Nouveau' }} locataire{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('locataires_list') }}">Locataires</a></li>
+<li class="breadcrumb-item active">{{ 'Modifier' if locataire else 'Nouveau locataire' }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-person-plus me-2 text-primary"></i>{{ 'Modifier le locataire' if locataire else 'Nouveau locataire' }}</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="nom" value="{{ locataire.nom if locataire else '' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Prénom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="prenom" value="{{ locataire.prenom if locataire else '' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" class="form-control" name="email" value="{{ locataire.email if locataire else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Téléphone</label>
+                            <input type="text" class="form-control" name="telephone" value="{{ locataire.telephone if locataire else '' }}" placeholder="06 12 34 56 78">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Adresse</label>
+                            <input type="text" class="form-control" name="adresse" value="{{ locataire.adresse if locataire else '' }}" placeholder="Adresse du locataire">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Date de naissance</label>
+                            <input type="date" class="form-control" name="date_naissance"
+                                value="{{ locataire.date_naissance.strftime('%Y-%m-%d') if locataire and locataire.date_naissance else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Profession</label>
+                            <input type="text" class="form-control" name="profession" value="{{ locataire.profession if locataire else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Revenu mensuel net (€)</label>
+                            <input type="number" step="0.01" class="form-control" name="revenu_mensuel"
+                                value="{{ locataire.revenu_mensuel if locataire else '' }}" placeholder="2500">
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>{{ 'Mettre à jour' if locataire else 'Créer le locataire' }}
+                        </button>
+                        <a href="{{ url_for('locataires_list') }}" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

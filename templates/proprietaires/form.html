@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Modifier' if proprietaire else 'Nouveau' }} propriétaire{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('proprietaires_list') }}">Propriétaires</a></li>
+<li class="breadcrumb-item active">{{ 'Modifier' if proprietaire else 'Nouveau propriétaire' }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-person-badge me-2 text-primary"></i>{{ 'Modifier le propriétaire' if proprietaire else 'Nouveau propriétaire' }}</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="nom" value="{{ proprietaire.nom if proprietaire else '' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Prénom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="prenom" value="{{ proprietaire.prenom if proprietaire else '' }}" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" class="form-control" name="email" value="{{ proprietaire.email if proprietaire else '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Téléphone</label>
+                            <input type="text" class="form-control" name="telephone" value="{{ proprietaire.telephone if proprietaire else '' }}" placeholder="06 12 34 56 78">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Adresse</label>
+                            <input type="text" class="form-control" name="adresse" value="{{ proprietaire.adresse if proprietaire else '' }}" placeholder="10 rue de Paris, 75001 Paris">
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>{{ 'Mettre à jour' if proprietaire else 'Créer' }}
+                        </button>
+                        <a href="{{ url_for('proprietaires_list') }}" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

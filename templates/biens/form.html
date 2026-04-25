@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Modifier' if bien else 'Nouveau' }} bien{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('biens_list') }}">Biens</a></li>
+<li class="breadcrumb-item active">{{ 'Modifier' if bien else 'Nouveau bien' }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-house-add me-2 text-primary"></i>{{ 'Modifier le bien' if bien else 'Nouveau bien immobilier' }}</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Référence <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="reference" value="{{ bien.reference if bien else '' }}" required placeholder="APP-001">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
+                            <select class="form-select" name="type_bien" required>
+                                {% for t in ['Appartement', 'Maison', 'Studio', 'Bureau', 'Commerce', 'Garage', 'Terrain', 'Autre'] %}
+                                <option value="{{ t }}" {% if bien and bien.type_bien == t %}selected{% endif %}>{{ t }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Statut</label>
+                            <select class="form-select" name="statut">
+                                {% for s in ['Disponible', 'Loué', 'En travaux', 'Vendu'] %}
+                                <option value="{{ s }}" {% if bien and bien.statut == s %}selected{% elif not bien and s == 'Disponible' %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Adresse <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="adresse" value="{{ bien.adresse if bien else '' }}" required placeholder="15 avenue Victor Hugo">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Ville</label>
+                            <input type="text" class="form-control" name="ville" value="{{ bien.ville if bien else '' }}" placeholder="Paris">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Code postal</label>
+                            <input type="text" class="form-control" name="code_postal" value="{{ bien.code_postal if bien else '' }}" placeholder="75016">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Surface (m²)</label>
+                            <input type="number" step="0.01" class="form-control" name="surface" value="{{ bien.surface if bien else '' }}" placeholder="65">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Nombre de pièces</label>
+                            <input type="number" class="form-control" name="nb_pieces" value="{{ bien.nb_pieces if bien else '' }}" placeholder="3">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Propriétaire</label>
+                            <select class="form-select" name="proprietaire_id">
+                                <option value="">-- Sélectionner --</option>
+                                {% for p in proprietaires %}
+                                <option value="{{ p.id }}" {% if bien and bien.proprietaire_id == p.id %}selected{% endif %}>{{ p }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Loyer mensuel (€)</label>
+                            <input type="number" step="0.01" class="form-control" name="loyer_mensuel" value="{{ bien.loyer_mensuel if bien else '' }}" placeholder="1200">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Charges (€)</label>
+                            <input type="number" step="0.01" class="form-control" name="charges" value="{{ bien.charges if bien else '0' }}" placeholder="150">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea class="form-control" name="description" rows="3" placeholder="Description du bien...">{{ bien.description if bien else '' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>{{ 'Mettre à jour' if bien else 'Créer le bien' }}
+                        </button>
+                        <a href="{{ url_for('biens_list') }}" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card bg-light border-0">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Aide</h6>
+                <p class="text-muted small">
+                    Renseignez les informations du bien immobilier. La référence doit être unique (ex: APP-001, MAI-003).
+                </p>
+                <p class="text-muted small">
+                    Le loyer mensuel est le loyer hors charges. Les charges locatives sont à saisir séparément.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

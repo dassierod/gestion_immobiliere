@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Paiements{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Paiements</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="bi bi-cash-coin me-2 text-primary"></i>Paiements</h1>
+        <p class="text-muted">Suivi des loyers et paiements</p>
+    </div>
+    <a href="{{ url_for('paiement_create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-2"></i>Nouveau paiement
+    </a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form class="row g-2 align-items-center" method="get">
+            <div class="col-md-3">
+                <select name="statut" class="form-select form-select-sm">
+                    <option value="">Tous les statuts</option>
+                    <option value="Payé" {% if statut == 'Payé' %}selected{% endif %}>Payé</option>
+                    <option value="En attente" {% if statut == 'En attente' %}selected{% endif %}>En attente</option>
+                    <option value="Retard" {% if statut == 'Retard' %}selected{% endif %}>Retard</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">Filtrer</button>
+                <a href="{{ url_for('paiements_list') }}" class="btn btn-sm btn-outline-secondary ms-1">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if paiements %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Contrat</th>
+                        <th>Locataire</th>
+                        <th>Date</th>
+                        <th>Montant</th>
+                        <th>Type</th>
+                        <th>Mode</th>
+                        <th>Statut</th>
+                        <th class="text-end pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in paiements %}
+                    <tr>
+                        <td class="ps-3">
+                            <a href="{{ url_for('contrat_detail', contrat_id=p.contrat.id) }}" class="fw-medium text-decoration-none">{{ p.contrat.numero }}</a>
+                        </td>
+                        <td>{{ p.contrat.locataire if p.contrat else '—' }}</td>
+                        <td>{{ p.date_paiement.strftime('%d/%m/%Y') }}</td>
+                        <td class="fw-bold">{{ "%.2f"|format(p.montant) }} €</td>
+                        <td>{{ p.type_paiement }}</td>
+                        <td>{{ p.mode_paiement }}</td>
+                        <td>
+                            {% if p.statut == 'Payé' %}
+                                <span class="badge badge-paye">{{ p.statut }}</span>
+                            {% elif p.statut == 'En attente' %}
+                                <span class="badge badge-attente">{{ p.statut }}</span>
+                            {% else %}
+                                <span class="badge badge-retard">{{ p.statut }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-3">
+                            <a href="{{ url_for('paiement_edit', paiement_id=p.id) }}" class="btn btn-sm btn-outline-secondary" title="Modifier"><i class="bi bi-pencil"></i></a>
+                            <form method="post" action="{{ url_for('paiement_delete', paiement_id=p.id) }}" class="d-inline" onsubmit="return confirm('Supprimer ce paiement ?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-cash-stack fs-1 d-block mb-3"></i>
+            <h5>Aucun paiement trouvé</h5>
+            <a href="{{ url_for('paiement_create') }}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-lg me-2"></i>Enregistrer un paiement
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

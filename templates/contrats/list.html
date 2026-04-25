@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block title %}Contrats{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Contrats</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="bi bi-file-text me-2 text-primary"></i>Contrats de location</h1>
+        <p class="text-muted">Gestion des contrats de bail</p>
+    </div>
+    <a href="{{ url_for('contrat_create') }}" class="btn btn-primary">
+        <i class="bi bi-file-plus me-2"></i>Nouveau contrat
+    </a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form class="row g-2 align-items-center" method="get">
+            <div class="col-md-3">
+                <select name="statut" class="form-select form-select-sm">
+                    <option value="">Tous les statuts</option>
+                    <option value="Actif" {% if statut == 'Actif' %}selected{% endif %}>Actif</option>
+                    <option value="Terminé" {% if statut == 'Terminé' %}selected{% endif %}>Terminé</option>
+                    <option value="Résilié" {% if statut == 'Résilié' %}selected{% endif %}>Résilié</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">Filtrer</button>
+                <a href="{{ url_for('contrats_list') }}" class="btn btn-sm btn-outline-secondary ms-1">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if contrats %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Numéro</th>
+                        <th>Bien</th>
+                        <th>Locataire</th>
+                        <th>Début</th>
+                        <th>Fin</th>
+                        <th>Loyer TC</th>
+                        <th>Statut</th>
+                        <th class="text-end pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in contrats %}
+                    <tr>
+                        <td class="ps-3">
+                            <a href="{{ url_for('contrat_detail', contrat_id=c.id) }}" class="fw-semibold text-decoration-none">{{ c.numero }}</a>
+                        </td>
+                        <td>
+                            {% if c.bien %}
+                            <a href="{{ url_for('bien_detail', bien_id=c.bien.id) }}" class="text-decoration-none">{{ c.bien.reference }}</a>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td>
+                            {% if c.locataire %}
+                            <a href="{{ url_for('locataire_detail', loc_id=c.locataire.id) }}" class="text-decoration-none">{{ c.locataire }}</a>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td>{{ c.date_debut.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ c.date_fin.strftime('%d/%m/%Y') if c.date_fin else 'CDI' }}</td>
+                        <td class="fw-bold">{{ "%.0f"|format(c.loyer_total()) }} €</td>
+                        <td>
+                            {% if c.statut == 'Actif' %}
+                                <span class="badge badge-actif">{{ c.statut }}</span>
+                            {% else %}
+                                <span class="badge badge-termine">{{ c.statut }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-3">
+                            <a href="{{ url_for('contrat_detail', contrat_id=c.id) }}" class="btn btn-sm btn-outline-primary" title="Détail"><i class="bi bi-eye"></i></a>
+                            <a href="{{ url_for('contrat_edit', contrat_id=c.id) }}" class="btn btn-sm btn-outline-secondary" title="Modifier"><i class="bi bi-pencil"></i></a>
+                            <form method="post" action="{{ url_for('contrat_delete', contrat_id=c.id) }}" class="d-inline" onsubmit="return confirm('Supprimer ce contrat ?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-file-x fs-1 d-block mb-3"></i>
+            <h5>Aucun contrat trouvé</h5>
+            <a href="{{ url_for('contrat_create') }}" class="btn btn-primary mt-2">
+                <i class="bi bi-file-plus me-2"></i>Créer un contrat
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

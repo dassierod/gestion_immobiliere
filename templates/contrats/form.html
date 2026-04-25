@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Modifier' if contrat else 'Nouveau' }} contrat{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('contrats_list') }}">Contrats</a></li>
+<li class="breadcrumb-item active">{{ 'Modifier' if contrat else 'Nouveau contrat' }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-file-plus me-2 text-primary"></i>{{ 'Modifier le contrat' if contrat else 'Nouveau contrat de location' }}</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Numéro de contrat <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="numero"
+                                value="{{ contrat.numero if contrat else '' }}" required placeholder="CTR-2024-001">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Statut</label>
+                            <select class="form-select" name="statut">
+                                {% for s in ['Actif', 'Terminé', 'Résilié'] %}
+                                <option value="{{ s }}" {% if contrat and contrat.statut == s %}selected{% elif not contrat and s == 'Actif' %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Bien immobilier <span class="text-danger">*</span></label>
+                            <select class="form-select" name="bien_id" required>
+                                <option value="">-- Sélectionner un bien --</option>
+                                {% for b in biens %}
+                                <option value="{{ b.id }}" {% if contrat and contrat.bien_id == b.id %}selected{% endif %}>
+                                    {{ b.reference }} - {{ b.adresse[:40] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Locataire <span class="text-danger">*</span></label>
+                            <select class="form-select" name="locataire_id" required>
+                                <option value="">-- Sélectionner un locataire --</option>
+                                {% for l in locataires %}
+                                <option value="{{ l.id }}" {% if contrat and contrat.locataire_id == l.id %}selected{% endif %}>{{ l }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Date de début <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="date_debut" required
+                                value="{{ contrat.date_debut.strftime('%Y-%m-%d') if contrat else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Date de fin <span class="text-muted small">(optionnel)</span></label>
+                            <input type="date" class="form-control" name="date_fin"
+                                value="{{ contrat.date_fin.strftime('%Y-%m-%d') if contrat and contrat.date_fin else '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Loyer mensuel (€) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" name="loyer" required
+                                value="{{ contrat.loyer if contrat else '' }}" placeholder="1200">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Charges (€)</label>
+                            <input type="number" step="0.01" class="form-control" name="charges"
+                                value="{{ contrat.charges if contrat else '0' }}" placeholder="150">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Caution (€)</label>
+                            <input type="number" step="0.01" class="form-control" name="caution"
+                                value="{{ contrat.caution if contrat else '0' }}" placeholder="2400">
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-2"></i>{{ 'Mettre à jour' if contrat else 'Créer le contrat' }}
+                        </button>
+                        <a href="{{ url_for('contrats_list') }}" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
